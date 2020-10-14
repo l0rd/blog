@@ -8,13 +8,21 @@
     "start": "next start"
   },
   "dependencies": {
+    "@mapbox/rehype-prism": "^0.5.0",
     "date-fns": "^2.12.0",
     "fs": "0.0.1-security",
     "gray-matter": "^4.0.2",
     "next": "^9.3.3",
+    "prismjs": "^1.22.0",
     "react": "^16.13.0",
     "react-dom": "^16.13.0",
+    "rehype": "^11.0.0",
+    "rehype-document": "^5.1.0",
+    "rehype-format": "^3.1.0",
+    "rehype-highlight": "^4.0.0",
     "remark": "^12.0.0",
-    "remark-html": "^11.0.1"
+    "remark-highlight.js": "^6.0.0",
+    "remark-html": "^11.0.1",
+    "remark-rehype": "^8.0.0"
   }
 }

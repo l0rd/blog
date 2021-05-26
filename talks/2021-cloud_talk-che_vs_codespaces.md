@@ -3,6 +3,8 @@ date: '2021-05-11'
 eventName: 'ECD Cloud Tool Time'
 eventKind: 'Webinar'
 title: 'Eclipse Che & GitHub Codespaces '
+eventLink: ''
+eventSessionLink: ''
 slidesLink: 'https://docs.google.com/presentation/d/1ZSA3_RyL8fU-etTwkErTi-xZAtQ2azrPxN2mGulAmfM/edit?usp=sharing'
 recordingLink: 'https://youtu.be/OKJ_rjIzzqs'
 ---

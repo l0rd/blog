@@ -14,13 +14,14 @@ export default function Speaking({ allTalksData }) {
         <section className={`${utilStyles.headingMd} ${utilStyles.padding1px}`}>
             <h2 className={utilStyles.headingLg}>Talks</h2>
             <ul className={utilStyles.list}>
-            {allTalksData.map(({ id, date, eventName, title, recordingLink, slidesLink }) => (
+            {allTalksData.map(({ id, date, eventName, title, eventLink, eventSessionLink, recordingLink, slidesLink }) => (
                 <li className={utilStyles.listItem} key={id}>
-                {eventName} - {title}
-                <br/>
                 <small className={utilStyles.lightText}>
                     <Date dateString={date} />
+                    - <Link href={eventLink}><a>{eventName}</a></Link>
                 </small>
+                <br/>
+                <Link href={eventSessionLink}><a>{title}</a></Link>
                 <br/>
                 <small>
                     <Link href={recordingLink}><a>video</a></Link> - <Link href={slidesLink}><a>slides</a></Link>

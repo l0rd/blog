@@ -4,7 +4,7 @@ import utilStyles from '../styles/utils.module.css'
 import Link from 'next/link'
 
 const name = 'Mario'
-export const siteTitle = 'Mario\'s blog'
+export const siteTitle = 'l0rd.io'
 
 export default function Layout({ children, home }) {
   return (
@@ -13,7 +13,7 @@ export default function Layout({ children, home }) {
         <link rel="icon" href="/favicon.ico" />
         <meta
           name="description"
-          content="Mario Loriedo personal webpage"
+          content="Mario Loriedo"
         />
         <meta
           property="og:image"
@@ -27,13 +27,16 @@ export default function Layout({ children, home }) {
       <header className={styles.header}>
         <div className={utilStyles.topnav}>
           <Link href="/">
+            <a>Home</a>
+          </Link>
+          <Link href="/about">
             <a>About</a>
           </Link>
           <Link href="/blog">
             <a>Blog</a>
           </Link>
-          <Link href="/talks">
-            <a>Talks</a>
+          <Link href="/speaking">
+            <a>Speaking</a>
           </Link>
         </div>
         {home ? (

@@ -5,11 +5,11 @@ import Date from '../components/date'
 import utilStyles from '../styles/utils.module.css'
 import Link from 'next/link'
 
-export default function Talks({ allPostsData }) {
+export default function Posts({ allPostsData }) {
     return (
       <Layout>
         <Head>
-          <title>{siteTitle}</title>
+          <title>{siteTitle} :: blog</title>
         </Head>
         <section className={`${utilStyles.headingMd} ${utilStyles.padding1px}`}>
           <h2 className={utilStyles.headingLg}>Blog Posts</h2>

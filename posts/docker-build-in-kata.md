@@ -6,11 +6,12 @@ date: '2022-01-26'
 Red Hat OpenShift is known for its top-notch security defaults. Running a container as root is not allowed. Running a container as a specific (non root) user is also not allowed. That makes it hard to run `docker build` or `buidah` from a container. We are going to explore how to do that with [Kata Containers](https://github.com/kata-containers/kata-containers).
 
 
-## Install Kata Containers 
+## Install the Sandbox Containers Operator on OpenShift
 
-First we need to provision an OpenShift cluster that allows nested virtualization. We can do that with cluster bot `launch 4.8 gcp`
+First we need to provision an OpenShift cluster that allows nested virtualization. That's not possible on `AWS` so we need to use `GCP`. For the records I am using our internal `cluster bot` and invoke the command `launch 4.8 gcp`.
 
-Deploy the Kata Containers Operator from OperatorHub:
+Once the cluster is ready the first step is to deploy OpenShift Sandbox Containers Operator from OperatorHub
+
 ```bash
 $ oc create -f - <<EOF
 apiVersion: operators.coreos.com/v1alpha1
@@ -27,7 +28,8 @@ spec:
 EOF
 ```
 
-Create the operand
+Create a `KataConfig`
+
 ```bash
 $ oc create -f - <<EOF
 apiVersion: kataconfiguration.openshift.io/v1
@@ -38,12 +40,16 @@ metadata:
 EOF
 ```
 
-Wait that the installation is complete. Wait that the completed nodes count 
+Wait that the installation is complete: the `.status.totalNodesCount` should match `.status.installationStatus.completed.completedNodesCount`
+
 ```bash
 $ oc describe kataconfig example-kataconfig
-$ oc wait --for=jsonpath='{.status.totalNodesCount}'='{.status.installationStatus.completed.completedNodesCount}' kataconfig example-kataconfig --timeout=-1s -n openshift-sandboxed-containers-operator
-$ oc get -o jsonpath='{.status.installationStatus.completed.completedNodesCount}' kataconfig example-kataconfig -n openshift-sandboxed-containers-operator
-$ oc get -o jsonpath='{.status.totalNodesCount}' kataconfig example-kataconfig -n openshift-sandboxed-containers-operator
+$ oc get -o jsonpath='{.status.installationStatus.completed.completedNodesCount}' \
+            kataconfig example-kataconfig \
+            -n openshift-sandboxed-containers-operator
+$ oc get -o jsonpath='{.status.totalNodesCount}' \
+            kataconfig example-kataconfig \
+            -n openshift-sandboxed-containers-operator
 ```
 
 ## Start a buildah container using the Kata runtime 
@@ -76,7 +82,7 @@ Once the pod is started let’s open a shell in it
 $ oc exec -ti buildah -- bash
 ```
 
-These are the security capabilities of the the container user (root):
+These are the security capabilities of the the container user (root)
 
 ```shell
 [root@buildah /]# capsh --print
@@ -93,7 +99,9 @@ gid=0(root)
 groups=
 ```
 
-Now I would like to create a simple Dockerfile that runs a command, runs a script from the build context the and finally use `dnf` to install a package:
+## Create a simple Dockerfile
+
+Now I would like to create a simple `Dockerfile` that executes a command, runs a script from the build context and finally use `dnf` to install a package
 
 ```Dockerfile
 FROM fedora:33
@@ -103,7 +111,7 @@ RUN dnf update -y | tee /output/update-output.txt
 RUN dnf install -y gcc
 ```
 
-and how the test-script.sh referenced from the Dockerfile 
+This is the `test-script.sh` referenced in the Dockerfile 
 
 ```bash
 #/bin/bash
@@ -111,10 +119,10 @@ echo "Args \$*"
 ls -l /
 ```
 
-The full command to run in the container
+To create those files I use these 2 commands from the container shell
 
 ```bash
-cd /root/ \ &&
+[root@buildah /]# cd /root/ \ &&
 cat > test-script.sh <<EOF
 #/bin/bash
 echo "Args \$*"
@@ -127,11 +135,21 @@ RUN ls -l /test-script.sh
 RUN /test-script.sh "Hello world"
 RUN dnf update -y | tee /output/update-output.txt
 RUN dnf install -y gcc
-EOF \ &&
-buildah -v /buildah-out:/output:rw -v /root/test-script.sh:/test-script.sh:ro build-using-dockerfile -t myimage -f Containerfile.test
+EOF
 ```
 
-Unfortunately the command is failing
+## Run the build
+
+Now that everyting is set I can try to build the Dockerfile using `buildah`
+
+```bash
+[root@buildah /]# buildah -v /buildah-out:/output:rw \
+        -v /root/test-script.sh:/test-script.sh:ro \
+        build-using-dockerfile \
+        -t myimage -f Containerfile.test
+```
+
+Unfortunately the command is failing with the following error message
 
 ```log
 process exited with error: fork/exec /bin/sh: no such file or directorysubprocess exited with status 1

@@ -12,7 +12,6 @@ First we need to provision an OpenShift cluster that allows nested virtualizatio
 
 Deploy the Kata Containers Operator from OperatorHub:
 ```bash
-$ oc new-project sandboxed-containers-operator
 $ oc create -f - <<EOF
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
@@ -39,7 +38,7 @@ metadata:
 EOF
 ```
 
-Wait that the installation is complete
+Wait that the installation is complete. Wait that the completed nodes count 
 ```bash
 $ oc describe kataconfig example-kataconfig
 $ oc wait --for=jsonpath='{.status.totalNodesCount}'='{.status.installationStatus.completed.completedNodesCount}' kataconfig example-kataconfig --timeout=-1s -n openshift-sandboxed-containers-operator
@@ -49,7 +48,7 @@ $ oc get -o jsonpath='{.status.totalNodesCount}' kataconfig example-kataconfig -
 
 ## Start a buildah container using the Kata runtime 
 
-Ok now let’s start a kata container with `buildah` official image and let’s attach it to an empty volume
+Ok now let’s start a kata container with `buildah` official image and let’s attach it to an `emptyDir` volume
 
 ```bash
 $ oc create -f - <<EOF
@@ -61,7 +60,7 @@ spec:
   runtimeClassName: kata
   containers:
     - name: docker
-      image: quay.io/buildah/stable:v1.14.8
+      image: quay.io/buildah/stable:latest
       volumeMounts:
       - mountPath: /buildah-out
         name: buildah-out
@@ -71,28 +70,15 @@ spec:
 EOF
 ```
 
-Once the container starts let’s create a simple Dockerfile
+Once the pod is started let’s open a shell in it
 
 ```shell
 $ oc exec -ti buildah -- bash
-# ---
-[root@buildah /]# cd /root/
-[root@buildah /]# cat > test-script.sh <<EOF
-#/bin/bash
-echo "Args \$*"
-ls -l /
-EOF
-[root@buildah /]# chmod +x test-script.sh
-[root@buildah /]# cat > Containerfile.test <<EOF
-FROM fedora:33
-RUN ls -l /test-script.sh
-RUN /test-script.sh "Hello world"
-RUN dnf update -y | tee /output/update-output.txt
-RUN dnf install -y gcc
-EOF
-[root@buildah /]# buildah -v /buildah-out:/output:rw -v /root/test-script.sh:/test-script.sh:ro build-using-dockerfile -t myimage -f Containerfile.test
-process exited with error: fork/exec /bin/sh: no such file or directorysubprocess exited with status 1
-error building at STEP "RUN ls -l /test-script.sh": exit status 1
+```
+
+These are the security capabilities of the the container user (root):
+
+```shell
 [root@buildah /]# capsh --print
 Current: = cap_chown,cap_dac_override,cap_dac_read_search,cap_fowner,cap_fsetid,cap_kill,cap_setgid,cap_setuid,cap_setpcap,cap_linux_immutable,cap_net_bind_service,cap_net_broadcast,cap_net_admin,cap_net_raw,cap_ipc_lock,cap_ipc_owner,cap_sys_module,cap_sys_rawio,cap_sys_chroot,cap_sys_ptrace,cap_sys_pacct,cap_sys_admin,cap_sys_boot,cap_sys_nice,cap_sys_resource,cap_sys_time,cap_sys_tty_config,cap_mknod,cap_lease,cap_audit_write,cap_audit_control,cap_setfcap,cap_mac_override,cap_mac_admin,cap_syslog,cap_wake_alarm,cap_block_suspend,cap_audit_read,38,39+ep
 Bounding set =cap_chown,cap_dac_override,cap_dac_read_search,cap_fowner,cap_fsetid,cap_kill,cap_setgid,cap_setuid,cap_setpcap,cap_linux_immutable,cap_net_bind_service,cap_net_broadcast,cap_net_admin,cap_net_raw,cap_ipc_lock,cap_ipc_owner,cap_sys_module,cap_sys_rawio,cap_sys_chroot,cap_sys_ptrace,cap_sys_pacct,cap_sys_admin,cap_sys_boot,cap_sys_nice,cap_sys_resource,cap_sys_time,cap_sys_tty_config,cap_mknod,cap_lease,cap_audit_write,cap_audit_control,cap_setfcap,cap_mac_override,cap_mac_admin,cap_syslog,cap_wake_alarm,cap_block_suspend,cap_audit_read,38,39
@@ -105,4 +91,49 @@ Securebits: 00/0x0/1'b0
 uid=0(root)
 gid=0(root)
 groups=
+```
+
+Now I would like to create a simple Dockerfile that runs a command, runs a script from the build context the and finally use `dnf` to install a package:
+
+```Dockerfile
+FROM fedora:33
+RUN ls -l /test-script.sh
+RUN /test-script.sh "Hello world"
+RUN dnf update -y | tee /output/update-output.txt
+RUN dnf install -y gcc
+```
+
+and how the test-script.sh referenced from the Dockerfile 
+
+```bash
+#/bin/bash
+echo "Args \$*"
+ls -l /
+```
+
+The full command to run in the container
+
+```bash
+cd /root/ \ &&
+cat > test-script.sh <<EOF
+#/bin/bash
+echo "Args \$*"
+ls -l /
+EOF \ &&
+chmod +x test-script.sh \ &&
+cat > Containerfile.test <<EOF
+FROM fedora:33
+RUN ls -l /test-script.sh
+RUN /test-script.sh "Hello world"
+RUN dnf update -y | tee /output/update-output.txt
+RUN dnf install -y gcc
+EOF \ &&
+buildah -v /buildah-out:/output:rw -v /root/test-script.sh:/test-script.sh:ro build-using-dockerfile -t myimage -f Containerfile.test
+```
+
+Unfortunately the command is failing
+
+```log
+process exited with error: fork/exec /bin/sh: no such file or directorysubprocess exited with status 1
+error building at STEP "RUN ls -l /test-script.sh": exit status 1
 ```

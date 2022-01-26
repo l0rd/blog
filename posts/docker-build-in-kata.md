@@ -13,7 +13,8 @@ First we need to provision an OpenShift cluster that allows nested virtualizatio
 Once the cluster is ready the first step is to deploy OpenShift Sandbox Containers Operator from OperatorHub
 
 ```bash
-$ oc create -f - <<EOF
+oc create namespace openshift-sandboxed-containers-operator && \
+oc create -f - <<EOF
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:

@@ -8,7 +8,7 @@ Red Hat OpenShift is known for its top-notch security defaults. Running a contai
 
 ## Install the Sandbox Containers Operator on OpenShift
 
-First we need to provision an OpenShift cluster that allows nested virtualization. That's not possible on `AWS` so we need to use `GCP`. For the records I am using our internal `cluster bot` and invoke the command `launch 4.8 gcp`.
+First we need to provision an OpenShift cluster that allows nested virtualization. That's not possible on `AWS` so we need to use `GCP`. For the records I am using our internal `cluster bot` and invoke the command `launch 4.9 gcp`.
 
 Once the cluster is ready the first step is to deploy OpenShift Sandbox Containers Operator from OperatorHub
 
@@ -21,7 +21,7 @@ metadata:
   name: sandboxed-containers-operator
   namespace: openshift-sandboxed-containers-operator
 spec:
-  channel: preview-1.0
+  channel: preview-1.1
   installPlanApproval: Automatic
   name: sandboxed-containers-operator
   source: redhat-operators
@@ -41,16 +41,13 @@ metadata:
 EOF
 ```
 
-Wait that the installation is complete: the `.status.totalNodesCount` should match `.status.installationStatus.completed.completedNodesCount`
+Wait that the installation is complete: the `.status.totalNodesCount` should match `.status.installationStatus.completed.completedNodesCount` (it may take more than 10 minutes)
 
 ```bash
-$ oc describe kataconfig example-kataconfig
-$ oc get -o jsonpath='{.status.installationStatus.completed.completedNodesCount}' \
-            kataconfig example-kataconfig \
-            -n openshift-sandboxed-containers-operator
-$ oc get -o jsonpath='{.status.totalNodesCount}' \
-            kataconfig example-kataconfig \
-            -n openshift-sandboxed-containers-operator
+$ k wait --for=jsonpath='{.status.installationStatus.completed.completedNodesCount}'=3 \
+          kataconfig example-kataconfig \
+          -n openshift-sandboxed-containers-operator \
+           --timeout=-1s
 ```
 
 ## Start a buildah container using the Kata runtime 
@@ -123,13 +120,13 @@ ls -l /
 To create those files I use these 2 commands from the container shell
 
 ```bash
-[root@buildah /]# cd /root/ \ &&
+[root@buildah /]# cd /root/ && \
 cat > test-script.sh <<EOF
 #/bin/bash
 echo "Args \$*"
 ls -l /
-EOF \ &&
-chmod +x test-script.sh \ &&
+EOF
+chmod +x test-script.sh && \
 cat > Containerfile.test <<EOF
 FROM fedora:33
 RUN ls -l /test-script.sh
@@ -144,15 +141,15 @@ EOF
 Now that everyting is set I can try to build the Dockerfile using `buildah`
 
 ```bash
-[root@buildah /]# buildah -v /buildah-out:/output:rw \
+buildah -v /buildah-out:/output:rw \
         -v /root/test-script.sh:/test-script.sh:ro \
-        build-using-dockerfile \
+        build-using-dockerfile --storage-driver vfs \
         -t myimage -f Containerfile.test
 ```
 
-Unfortunately the command is failing with the following error message
+And it works!
 
 ```log
-process exited with error: fork/exec /bin/sh: no such file or directorysubprocess exited with status 1
-error building at STEP "RUN ls -l /test-script.sh": exit status 1
+Successfully tagged localhost/myimage:latest
+b742c42ed013acd7b522bf189e643861e8995ffcf18aaadf6ab880b041c6a407
 ```

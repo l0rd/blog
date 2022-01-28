@@ -13,7 +13,7 @@ First we need to provision an OpenShift cluster that allows nested virtualizatio
 Once the cluster is ready the first step is to deploy OpenShift Sandbox Containers Operator from OperatorHub
 
 ```bash
-oc create namespace openshift-sandboxed-containers-operator && \
+$ oc create namespace openshift-sandboxed-containers-operator && \
 oc create -f - <<EOF
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
@@ -26,6 +26,7 @@ spec:
   name: sandboxed-containers-operator
   source: redhat-operators
   sourceNamespace: openshift-marketplace
+  startingCSV: sandboxed-containers-operator.v1.1.0
 EOF
 ```
 
@@ -44,15 +45,18 @@ EOF
 Wait that the installation is complete: the `.status.totalNodesCount` should match `.status.installationStatus.completed.completedNodesCount` (it may take more than 10 minutes)
 
 ```bash
-$ k wait --for=jsonpath='{.status.installationStatus.completed.completedNodesCount}'=3 \
+$ k wait --for=jsonpath='{.status.installationStatus.IsInProgress}'=false \
           kataconfig example-kataconfig \
           -n openshift-sandboxed-containers-operator \
            --timeout=-1s
+$ k get kataconfig example-kataconfig \
+          -n openshift-sandboxed-containers-operator \
+          -o json | jq '.status.totalNodesCount == .status.installationStatus.completed.completedNodesCount'
 ```
 
 ## Start a buildah container using the Kata runtime 
 
-Ok now let’s start a kata container with `buildah` official image and let’s attach it to an `emptyDir` volume
+Ok now let’s start a kata container with `buildah` official image ~and let’s attach it to an `emptyDir` volume~
 
 ```bash
 $ oc create -f - <<EOF
@@ -63,14 +67,8 @@ metadata:
 spec:
   runtimeClassName: kata
   containers:
-    - name: docker
-      image: quay.io/buildah/stable:latest
-      volumeMounts:
-      - mountPath: /buildah-out
-        name: buildah-out
-  volumes:
-  - name: buildah-out
-    emptyDir: {}
+    - name: buildah
+      image: quay.io/buildah/stable:v1.23.1
 EOF
 ```
 
@@ -136,15 +134,19 @@ RUN dnf install -y gcc
 EOF
 ```
 
-## Run the build
+## Run the build using vfs driver
 
 Now that everyting is set I can try to build the Dockerfile using `buildah`
 
 ```bash
-buildah -v /buildah-out:/output:rw \
+$ mkdir /buildah-out && time buildah -v /buildah-out:/output:rw \
         -v /root/test-script.sh:/test-script.sh:ro \
         build-using-dockerfile --storage-driver vfs \
         -t myimage -f Containerfile.test
+(...)
+real	6m5.121s
+user	1m29.008s
+sys	1m38.715s
 ```
 
 And it works!
@@ -152,4 +154,79 @@ And it works!
 ```log
 Successfully tagged localhost/myimage:latest
 b742c42ed013acd7b522bf189e643861e8995ffcf18aaadf6ab880b041c6a407
+```
+
+## Now faster with fuse (the default storage driver)
+
+The build took long, now we are tryng to use fuse to make it faster
+
+```bash
+$ oc apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: buildah-faster
+spec:
+  runtimeClassName: kata
+  containers:
+    - name: buildah
+      image: quay.io/buildah/stable:v1.23.1
+      volumeMounts:
+      - mountPath: /var/lib/containers
+        name: container-storage
+      - mountPath: /buildah-out
+        name: buildah-out
+      securityContext:
+        privileged: true
+  volumes:
+  - name: container-storage
+    emptyDir:
+     medium: Memory # <-- important because it has to be block device
+  - name: buildah-out
+    emptyDir: {}
+    #  medium: Memory
+EOF
+```
+
+Once the pod is started let’s open a shell in it
+
+```shell
+$ oc exec -ti buildah-faster -- bash
+```
+
+Create the fuse device
+
+```bash
+$ mknod /dev/fuse -m 0666 c 10 229
+```
+
+
+Create the Dockerfile and test-script as above
+
+```bash
+[root@buildah /]# cd /root/ && \
+cat > test-script.sh <<EOF
+#/bin/bash
+echo "Args \$*"
+ls -l /
+EOF
+chmod +x test-script.sh && \
+cat > Containerfile.test <<EOF
+FROM fedora:33
+RUN ls -l /test-script.sh
+RUN /test-script.sh "Hello world"
+RUN dnf update -y | tee /output/update-output.txt
+RUN dnf install -y gcc
+EOF
+```
+
+Build
+
+```
+$ mkdir /buildah-out && time buildah -v /buildah-out:/output:rw \
+        -v /root/test-script.sh:/test-script.sh:ro \
+        build-using-dockerfile \
+        -t myimage -f Containerfile.test
+(...)
+
 ```

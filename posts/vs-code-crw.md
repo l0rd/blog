@@ -129,17 +129,21 @@ An IntelliJ based workspace.
 
 ## Add a VS Code extension to the workspace
 
-The extensions view in Visual Studio Code lists available and installed extensions. Clicking on the install button adds the extension to the workspace. 
+The extensions view in Visual Studio Code lists available and installed extensions. The available extensions list is retrieved by the online [Open VSX Registry](). Clicking on the install button adds the extension to the workspace. 
 
 ![VS Code Extension view](/images/vs-code-crw/extensions-view.png "VS Code Extensions view")
 Installed and available extensions in VS Code.
 
+## Does that work on Developer Sandbox?
+
+Not yet. We are not deploying the Technical Preview on Developer Sandbox. It will be possible to start VS Code and IntelliJ based workspaces after the release of CodeReady Workspaces 2.16.
 
 ## Known issues
 
 👉 **The above instructions are not supposed to be tried in production. Most of the features described are still work in progress and here is a list of known issues (and sometimes fixed upstream).**
 
-- [Bad Gateway error when opening VS Code](https://github.com/eclipse/che/issues/21099)
-- [Websocket closed after a couple of minutes](https://github.com/eclipse/che/issues/21024)
-- [Workspace restart fails](https://github.com/eclipse/che/issues/21085)
-- [Feature Gap compared to Theia](https://github.com/eclipse/che/issues/21144)
+- [Bad Gateway error when opening VS Code](https://github.com/eclipse/che/issues/21099) (workaround: refresh the page)
+- [CPU limit count problem](https://github.com/che-incubator/che-code/pull/10/files) (workaround: do not specify CPU limits in the devfile)
+- [Websocket closed after a couple of minutes](https://github.com/eclipse/che/issues/21024) (workaround: refresh the page)
+- [Workspace restart fails](https://github.com/eclipse/che/issues/21085) (workaround: manually patch the DevWorkspace object and set `spec.started: true` or delete the workspace and start a new one)
+- [VS Code and JetBrains feature gap compared to Theia](https://github.com/eclipse/che/issues/21144)

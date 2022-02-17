@@ -10,10 +10,7 @@ export default function Home({ allPostsData }) {
         <title>{siteTitle}</title>
       </Head>
       <section className={utilStyles.headingMd}>
-        <p>I am relentlessly typing, building, pushing and deploying.<br />
-           I am a software engineer at the times of&nbsp;
-           <del style={{ textDecorationColor: '#e62a05' }}>containers</del> k8s.
-        </p>
+        <p>Accelerating software development, one container at a time.</p>
       </section>
 
     </Layout>

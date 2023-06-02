@@ -1,6 +1,6 @@
 schemaVersion: 2.2.0
 metadata:
-  name: cloud-dev-images
+  name: l0rd-blog
 components:
   - name: tools
     container:

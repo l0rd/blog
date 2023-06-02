@@ -1,0 +1,10 @@
+schemaVersion: 2.2.0
+metadata:
+  name: cloud-dev-images
+commands:
+  - id: yarn_install
+    exec:
+      commandLine: yarn install
+  - id: yarn_run
+    exec:
+      commandLine: yarn dev

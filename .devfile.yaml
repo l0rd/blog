@@ -1,10 +1,20 @@
 schemaVersion: 2.2.0
 metadata:
   name: cloud-dev-images
+components:
+  - name: tools
+    container:
+      image: quay.io/devfile/universal-developer-image:latest
+      memoryRequest: 1Gi
+      memoryLimit: 8Gi
+      cpuLimit: '4'
+      cpuRequest: '0.5'
 commands:
   - id: yarn_install
     exec:
+      component: tools
       commandLine: yarn install
   - id: yarn_run
     exec:
+      component: tools
       commandLine: yarn dev

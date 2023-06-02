@@ -1,5 +1,7 @@
 # Blog
 
+[![Dogfooding](https://img.shields.io/static/v1?message=l0rd.io&logo=eclipseche&color=FDB940&labelColor=525C86)](https://che-dogfooding.apps.che-dev.x6e0.p1.openshiftapps.com/#https://github.com/l0rd/blog)
+
 Built using [Next.js](https://nextjs.org) and deployed on [Vercel](https://vercel.com).
 
 ## Run locally

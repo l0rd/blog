@@ -10,11 +10,11 @@ components:
       cpuLimit: '4'
       cpuRequest: '0.5'
 commands:
-  - id: yarn_install
+  - id: yarn-install
     exec:
       component: tools
       commandLine: yarn install
-  - id: yarn_run
+  - id: yarn-dev
     exec:
       component: tools
       commandLine: yarn dev

@@ -6,12 +6,18 @@ Built using [Next.js](https://nextjs.org) and deployed on [Vercel](https://verce
 
 ## Run locally
 
-To run the development server:
+You need `next`, `react` and `react-dom` installed:
+
+```bash
+npm install next@latest react@latest react-dom@latest
+```
+
+Then you can run the development server with:
 
 ```bash
 npm run dev
 # or
-yarn dev
+yarn install && yarn dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
